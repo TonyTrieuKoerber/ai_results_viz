@@ -1,7 +1,7 @@
 from pathlib import Path
 import shutil
 import pandas as pd
-import csv_utils
+import utils
 
 def make_directories(path):
     destination_dir = path.parent.parent / "1_statistics"
@@ -12,7 +12,7 @@ def make_directories(path):
     return destination_dir, false_positives_dir, false_negative_dir
 
 def save_false_positives_and_negatives(score_path, destination_dir, threshold):
-    results = csv_utils.convert_test_scores_csv_to_df(score_path)
+    results = utils.convert_test_scores_csv_to_df(score_path)
     
     false_positives = results[(results.truth == 1) & (results.bad < threshold)]
     false_negatives = results[(results.truth == 0) & (results.bad >= threshold)]

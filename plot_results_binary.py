@@ -5,9 +5,31 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import roc_curve
 from pathlib import Path
+import json
 
-import csv_utils
+import utils
 
+
+def load_config(path:str) -> list:
+    with open(path) as f:
+        config_dict = json.load(f)
+    config = (
+        Path(config_dict['path_to_scores']), 
+        config_dict['negative_class'], 
+        config_dict['class_dict'], 
+        config_dict['threshold'],
+        config_dict['sample_dict'],
+    )
+    return config
+
+def make_directories_and_get_paths(path):
+    p = Path(path)
+    save_folder = p.parent.parent / '1_statistics'
+    if not save_folder.is_dir():
+        save_folder.mkdir()
+    save_path_roc_png = save_folder / 'roc.png'
+    save_path_cf_mat = save_folder / 'cf_matrix.png'
+    return save_folder, save_path_roc_png, save_path_cf_mat
 
 def plot_negative_roc(y_t: list, y_s: list, save_path: str, n = 5, negative_label=1):
     """Takes ground truth and scores for bad class and plots ROC curve with
@@ -69,16 +91,8 @@ def create_predictions_from_threshold(scr:list, th:float, clss: list, lbls:dict)
     Returns:
         list: list of predictions
     """
-    return list(map(lambda x: label_dict[classes[1]]  if x >= th else label_dict[classes[0]], scr))
+    return list(map(lambda x: lbls[classes[1]]  if x >= th else lbls[classes[0]], scr))
 
-def make_directories_and_get_paths(path):
-    p = Path(path)
-    save_folder = p.parent.parent / '1_statistics'
-    if not save_folder.is_dir():
-        save_folder.mkdir()
-    save_path_roc_png = save_folder / 'roc.png'
-    save_path_cf_mat = save_folder / 'cf_matrix.png'
-    return save_folder, save_path_roc_png, save_path_cf_mat
 
 def get_sample_truth(sample_name):
     if sample_name in bad_samples:
@@ -104,11 +118,11 @@ def convert_test_scores_to_sample_scores(df_results):
 
 
 def main(_threshold, score_path: str, save_path_roc: str, save_path_cf_matrix: str, clss:list, neg: str, lbls:dict):
-    results = csv_utils.convert_test_scores_csv_to_df(score_path)
-    y_scores = results.bad.to_list()
-    y_true = results.truth.to_list()
+    results = utils.convert_test_scores_csv_to_df(score_path)
+    y_scores = results.bad
+    y_true = results.truth
 
-    plot_negative_roc(y_true, y_scores, save_path_roc, n= 5, negative_label=label_dict[neg])
+    plot_negative_roc(y_true, y_scores, save_path_roc, n= 5, negative_label=lbls[neg])
     y_pred = create_predictions_from_threshold(y_scores, _threshold, clss, lbls)
     cf_matrix = calculate_cf_matrix(y_true, y_pred)
     plot_cf_matrix(cf_matrix, save_path_cf_matrix, clss)
@@ -123,30 +137,17 @@ def main(_threshold, score_path: str, save_path_roc: str, save_path_cf_matrix: s
 
 
 if __name__ == '__main__':
-    negative_class = 'bad'
+    path_to_config_json = Path('./config.json')
+    (path_to_scores, 
+    negative_class, 
+    class_dict,
+    threshold,
+    sample_dict) = load_config(path_to_config_json)
     classes = ['good', 'bad']
     # classes = ['good',]
-    label_dict = {'good':0, 'bad':1}
-    path_to_scores = Path('/home/tonytrieu/repositories/ai_results/Testing/model/test_scores.csv')
+
     save_folder, save_path_roc_png, save_path_cf_mat = make_directories_and_get_paths(path_to_scores)
-    threshold = 0.5
 
-    bad_samples = (
-        ('Fail-Cap1', 9,),
-        ('Fail-Cap1', 11,),
-        ('Fail-Cap1', 14,),
-        ('Stopfen', 0),
-        )
-    good_samples = (
-        ('Fail-Cap1', 5,),
-        ('Fail-Cap1', 13,),
-        ('Fail-Cap1', 15,),
-        ('Fail-Neck', 2,),
-        ('Good-Neck1', 4),
-        ('Good-Neck1', 5),
-        ('Good-Neck1', 6),
-        )
-
-    main(threshold, path_to_scores, save_path_roc_png, save_path_cf_mat, classes, negative_class, label_dict)
+    main(threshold, path_to_scores, save_path_roc_png, save_path_cf_mat, classes, negative_class, class_dict)
     
 
