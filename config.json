@@ -1,26 +1,20 @@
 {
-    "path_to_scores": "/home/tonytrieu/repositories/ai_results_viz/dummy_data/model/test_scores.csv",
+    "path_to_scores": "C:\\Users\\1699\\Repositories\\ai_results_viz\\dummy_data\\model\\test_scores.csv",
     "negative_class": "bad",
+    "classes": ["good", "bad"],
     "class_dict": {"good":0, "bad":1},
     "threshold": 0.5,
     "sample_dict":
     {
         "good":
         [
-            ["Fail-Cap1", 5],
-            ["Fail-Cap1", 13],
-            ["Fail-Cap1", 15],
-            ["Fail-Neck", 2],
-            ["Good-Neck1", 4],
-            ["Good-Neck1", 5],
-            ["Good-Neck1", 6]
+            ["good", 0],
+            ["good", 1]
         ],
         "bad" :
         [
-            ["Fail-Cap1", 9],
-            ["Fail-Cap1", 11],
-            ["Fail-Cap1", 14],
-            ["Stopfen", 0]
+            ["bad", 0],
+            ["bad", 1]
         ]
     }
 }
