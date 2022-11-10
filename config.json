@@ -1,20 +1,22 @@
 {
-    "path_to_scores": "C:\\Users\\1699\\Repositories\\ai_results_viz\\dummy_data\\model\\test_scores.csv",
-    "negative_class": "bad",
+    "path_to_scores": ".\\dummy_data\\model\\test_scores.csv",
     "classes": ["good", "bad"],
     "class_dict": {"good":0, "bad":1},
+    "negative_class": "bad",
     "threshold": 0.5,
     "sample_dict":
     {
         "good":
         [
-            ["good", 0],
-            ["good", 1]
+            ["Good", 0],
+            ["Good", 1],
+            ["Good", 2]
         ],
         "bad" :
         [
-            ["bad", 0],
-            ["bad", 1]
+            ["Bad", 0],
+            ["Bad", 1],
+            ["Bad", 2]
         ]
     }
 }

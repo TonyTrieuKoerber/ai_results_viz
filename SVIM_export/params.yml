@@ -1,0 +1,33 @@
+import_params:
+  import_file_path: './data/2022-11-09 C61_BV_Results.txt'
+  image_folder_column: 'Camera_2.Reg Image Pathname'
+  image_name_column: 'Camera_2.Reg Image Filename'
+  score_column: '700 M summary stopfen defect.Failed'
+  category_map: 
+      'Airline': 0
+      'Beschaedigung Abweichung am Glas SW': 0
+      'Beschaedigung Abweichung am Stopfen': 0
+      'Beschaedigung Kuchenbereich': 0
+      'Faser am Stopfen': 1
+      'Good': 0
+      'Kratzer Seitenwand': 0
+      'Lyophilisat zw Stopfen und Vialhals': 0
+      'Partikel am Stopfen': 0
+      'Punkt Mark am Stopfen': 1
+      'Verschmutzung Abrieb am Glas': 0
+      'Verschmutzung am Stopfen': 0
+
+export_params:
+  workspace_path: 'C:\Users\1699\Repositories\ai_results_viz\SVIM_export'
+  path_image_based_csv: 'C:\Users\1699\Repositories\ai_results_viz\SVIM_export\image_based_cf_matrix.csv'
+  path_image_based_cf_matrix: 'C:\Users\1699\Repositories\ai_results_viz\SVIM_export\image_based_cf_matrix.png'
+  path_sample_based_csv: 'C:\Users\1699\Repositories\ai_results_viz\SVIM_export\sample_based_cf_matrix.csv'
+  path_sample_based_cf_matrix: 'C:\Users\1699\Repositories\ai_results_viz\SVIM_export\sample_based_cf_matrix.png'
+
+evaluation parameters:
+  prediction_class_to_value_map:
+    'Good': 0
+    'Failed': 1
+  prediction_classes:
+    - 'Good'
+    - 'Failed'

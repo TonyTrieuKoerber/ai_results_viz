@@ -66,8 +66,8 @@ def plot_negative_roc(y_t: list, y_s: list, save_path: str, n = 5, negative_labe
     plt.savefig(save_path)
     plt.clf()
 
-def calculate_cf_matrix(y_true:pd.Series, y_pred:pd.Series, lbls: list) -> np.ndarray:
-    cf_matrix_labels = [class_dict[x] for x in lbls]
+def calculate_cf_matrix(y_true:pd.Series, y_pred:pd.Series, cls_dict: dict, clss: list) -> np.ndarray:
+    cf_matrix_labels = [cls_dict[x] for x in clss]
     cf_matrix = confusion_matrix(y_true, y_pred, labels=cf_matrix_labels)
     return cf_matrix
 
@@ -105,7 +105,7 @@ def get_sample_truth(sample_name, sam_dict):
     else:
         raise ValueError(f'"{sample_name}" not found in "bad_samples" or "good_samples"! Check if file is properly named.')        
 
-def convert_test_scores_to_sample_scores(df_results, sam_dict):
+def convert_test_scores_to_sample_scores(df_results, sam_dict, csv_save_path):
     df_samples = df_results.copy()
     split_image_names = df_results.img.apply(lambda x: Path(x).name.split('_'))
     df_samples['sample'] = split_image_names.apply(lambda x: (x[0],int(x[1])))
@@ -116,7 +116,7 @@ def convert_test_scores_to_sample_scores(df_results, sam_dict):
     predictions = grouped_df['bad'].max()
     sample_truths = grouped_df['sample_truth'].first()
     max_sample_scores = pd.concat([predictions, sample_truths], axis=1)
-    max_sample_scores.to_csv(path_to_scores.parent / "sample_predictions.csv")
+    max_sample_scores.to_csv(csv_save_path.parent / "sample_predictions.csv")
     return max_sample_scores
 
 
@@ -128,10 +128,10 @@ def main(score_path: str, _threshold, clss:list, neg: str, cls_dict:dict, sam_di
 
     plot_negative_roc(y_true, y_scores, save_path_roc, n= 5, negative_label=cls_dict[neg])
     y_pred = create_predictions_from_threshold(y_scores, _threshold, clss, cls_dict)
-    cf_matrix = calculate_cf_matrix(y_true, y_pred, clss)
+    cf_matrix = calculate_cf_matrix(y_true, y_pred, cls_dict, clss)
     plot_cf_matrix(cf_matrix, save_path_cf_matrix, clss)
     
-    sample_test_scores = convert_test_scores_to_sample_scores(test_scores, sam_dict)
+    sample_test_scores = convert_test_scores_to_sample_scores(test_scores, sam_dict, score_path)
     
     y_scores = sample_test_scores.bad
     y_true = sample_test_scores.sample_truth
