@@ -1,0 +1,23 @@
+import_params:
+  import_file_path: 'C:\Users\1699\Repositories\ai_results_viz\ai_pipeline_export\data\test_scores.csv'
+  image_name_column: 'img'
+  score_column: 'scores'
+  truth_column: 'truth'
+  extract_info_from_file_name: false
+  regex_expression_folder_path: '([^\\]+)$'
+  regex_expression_file_name: '(\d+)_(\d+)_(\d+).\w+$'
+  category_map: 
+    'good': 0
+    'bad': 1
+
+export_params:
+  workspace_path: 'C:\Users\1699\Repositories\ai_results_viz\ai_pipeline_export\'
+  export_path: 'C:\Users\1699\Repositories\ai_results_viz\ai_pipeline_export\data'
+
+evaluation parameters:
+  prediction_class_to_value_map:
+    'good': 0
+    'bad': 1
+  prediction_classes:
+    - 'good'
+    - 'bad'

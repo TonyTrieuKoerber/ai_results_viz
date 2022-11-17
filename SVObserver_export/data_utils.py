@@ -40,7 +40,7 @@ class ImportParams:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
-            self.import_file_path = Path(self.import_file_path)
+        self.import_file_path = Path(self.import_file_path)
 
 def extract_info(
     df: pd.DataFrame,

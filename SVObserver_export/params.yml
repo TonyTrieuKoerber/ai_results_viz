@@ -1,5 +1,5 @@
 import_params:
-  import_file_path: './SVIM_export/data/2022-11-09 C61_BV_Results.txt'
+  import_file_path: './SVObserver/data/2022-11-09 C61_BV_Results.txt'
   header: 1
   image_folder_column: 'Camera_2.Reg Image Pathname'
   image_name_column: 'Camera_2.Reg Image Filename'
