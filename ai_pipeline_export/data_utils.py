@@ -80,6 +80,9 @@ def extract_info(
             return 0
         else:
             return 1
+
+    def get_negative_score(scores):
+        return list(map(float, scores[1:-1].split()))[-1]
     
     def get_prediction(scores):
         scrores_list = list(map(float, scores[1:-1].split()))
@@ -91,6 +94,7 @@ def extract_info(
         'sample', 
         'revolution',
         'trigger',
+        'negative_score',
         'prediction',
         'truth'
         ]
@@ -103,6 +107,7 @@ def extract_info(
         df_out['sample'] = img_infos.apply(lambda x: int(x[1]))
         df_out['revolution'] = img_infos.apply(lambda x: int(x[2]))
         df_out['trigger'] = img_infos.apply(lambda x: int(x[3]))
+    df_out['negative_score'] = df[import_params.score_column].apply(get_negative_score)
     df_out['prediction'] = df[import_params.score_column].apply(get_prediction)
     df_out['truth'] = df_out['image_name'].apply(get_ground_truth)
     # df_out['truth'] = df[import_params.truth_column]
@@ -128,10 +133,10 @@ def convert_test_scores_to_sample_scores(scores_df):
     df = scores_df.copy()
     grouped_df = df.groupby(['category','sample','revolution'])
     predictions = grouped_df['prediction'].max()
+    max_scores = grouped_df['negative_score'].max()
     sample_truths = grouped_df['truth'].first()
-    max_sample_scores = pd.concat([predictions, sample_truths], axis=1)
+    max_sample_scores = pd.concat([max_scores, predictions, sample_truths], axis=1)
     return max_sample_scores
-
 
 if __name__ == '__main__':
     params_path = './params.yml'

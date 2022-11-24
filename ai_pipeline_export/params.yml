@@ -1,11 +1,10 @@
 import_params:
-  import_file_path: 'C:\Users\1699\tmp\datasets\C61_balanced_split\C61_Airline_balanced_split\model (copy)\test_scores.csv'
+  import_file_path: 'C:\Users\1699\Repositories\ai_results_viz\ai_pipeline_export\data\test_scores - Kopie.csv'
   image_name_column: 'img'
   score_column: 'scores'
   truth_column: 'truth'
   extract_info_from_file_name: true
-  regex_expression_folder_path: '([^\\]+)$'
-  regex_expression_file_name: '(\d+)_(\d+)_(\d+).\w+$'
+  regex_expression_file_name: '^(.+?)_.+_(\d+)_(\d+)_(\d+)'
   category_map: 
     'Airline': 1
     'Verformt': 1
@@ -17,12 +16,4 @@ import_params:
     'Gut': 0
 
 export_params:
-  export_path: 'C:\Users\1699\tmp\datasets\C61_balanced_split\C61_Airline_balanced_split\model (copy)'
-
-evaluation parameters:
-  prediction_class_to_value_map:
-    'good': 0
-    'bad': 1
-  prediction_classes:
-    - 'good'
-    - 'bad'
+  export_path: 'C:\Users\1699\Repositories\ai_results_viz\ai_pipeline_export\data'
