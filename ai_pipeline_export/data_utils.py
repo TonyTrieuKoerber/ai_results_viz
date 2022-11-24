@@ -42,11 +42,11 @@ class ImportParams:
             setattr(self, key, value)
         self.import_file_path = Path(self.import_file_path)
 
-def load_params(path: str):
+def load_params(path: str, params_type: str):
     params_path = Path(path)
     with open(params_path, 'r') as file:
         params = yaml.safe_load(file)
-    return ImportParams(**params['import_params'])
+    return ImportParams(**params[params_type])
 
 def extract_info(
     df: pd.DataFrame,
@@ -68,13 +68,19 @@ def extract_info(
 
     Returns:
         pd.DataFrame: _description_
-    """
-    def get_category_from_image_name(folder_path):
-        return re.search(r".+\/(.+)\/.+$", folder_path).group(1)
-    
-    def get_file_infos(file_name):
-        return list(re.search(r"(\d+)_(\d+)_(\d+).\w+$", file_name).groups())
+    """    
+    def get_file_infos(file_path):
+        p = Path(file_path)
+        file_name = p.name
+        return list(re.search(r"^(.+?)_.+_(\d+)_(\d+)_(\d+)", file_name).groups())
 
+    def get_ground_truth(file_name):
+        parent = Path(file_name).parent.name
+        if parent == "good":
+            return 0
+        else:
+            return 1
+    
     def get_prediction(scores):
         scrores_list = list(map(float, scores[1:-1].split()))
         return scrores_list.index(max(scrores_list))
@@ -91,14 +97,15 @@ def extract_info(
 
     df_out = pd.DataFrame(columns=df_columns)
     df_out['image_name'] = df[import_params.image_name_column]
-    df_out['category'] = df_out['image_name'].apply(get_category_from_image_name)
     if extract_info_from_file_name:
         img_infos = df_out['image_name'].apply(get_file_infos)
-        df_out['sample'] = img_infos.apply(lambda x: int(x[0]))
-        df_out['revolution'] = img_infos.apply(lambda x: int(x[1]))
-        df_out['trigger'] = img_infos.apply(lambda x: int(x[2]))
+        df_out['category'] = img_infos.apply(lambda x: x[0])
+        df_out['sample'] = img_infos.apply(lambda x: int(x[1]))
+        df_out['revolution'] = img_infos.apply(lambda x: int(x[2]))
+        df_out['trigger'] = img_infos.apply(lambda x: int(x[3]))
     df_out['prediction'] = df[import_params.score_column].apply(get_prediction)
-    df_out['truth'] = df[import_params.truth_column]
+    df_out['truth'] = df_out['image_name'].apply(get_ground_truth)
+    # df_out['truth'] = df[import_params.truth_column]
 
     return df_out
 
@@ -127,6 +134,6 @@ def convert_test_scores_to_sample_scores(scores_df):
 
 
 if __name__ == '__main__':
-    params_path = './ai_pipeline_export/params.yml'
-    import_params = load_params(params_path)
+    params_path = './params.yml'
+    import_params = load_params(params_path, 'import_params')
     df_results = load_results(import_params.import_file_path, import_params)
