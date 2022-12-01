@@ -1,19 +1,15 @@
 import_params:
-  import_file_path: 'C:\Users\1699\Repositories\ai_results_viz\ai_pipeline_export\data\test_scores - Kopie.csv'
+  import_file_path: 'C:\Users\1699\Repositories\ai_results_viz\ai_pipeline_export\data\test_scores.csv'
   image_name_column: 'img'
   score_column: 'scores'
   truth_column: 'truth'
   extract_info_from_file_name: true
   regex_expression_file_name: '^(.+?)_.+_(\d+)_(\d+)_(\d+)'
   category_map: 
+    'BeschSW': 1 
+    'KratzerSW': 1
     'Airline': 1
-    'Verformt': 1
-    'BeschStopfen_': 1
-    'MarkStopfen_': 1
-    'PartikelIglo_': 1
-    'FaserStopfen': 1
-    'LyoStopfen': 1_
-    'Gut': 0
+    'Gut' : 0
 
 export_params:
   export_path: 'C:\Users\1699\Repositories\ai_results_viz\ai_pipeline_export\data'

@@ -129,13 +129,14 @@ def load_results(
             extract_info_from_file_name=import_params.extract_info_from_file_name)
     return df_results
 
-def convert_test_scores_to_sample_scores(scores_df):
+def convert_test_scores_to_sample_scores(scores_df, category_map):
+    def get_ground_truth(category, category_map):
+        return category_map[category]
+        
     df = scores_df.copy()
-    grouped_df = df.groupby(['category','sample','revolution'])
-    predictions = grouped_df['prediction'].max()
-    max_scores = grouped_df['negative_score'].max()
-    sample_truths = grouped_df['truth'].first()
-    max_sample_scores = pd.concat([max_scores, predictions, sample_truths], axis=1)
+    df.truth = df.category.apply(get_ground_truth, category_map=category_map)
+    max_sample_scores = df.groupby(['category','sample','revolution']).aggregate(
+        {'prediction':'max', 'negative_score':'max', 'truth':'first'})
     return max_sample_scores
 
 if __name__ == '__main__':
