@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, roc_curve
 
 
-def calculate_cf_matrix(y_true:pd.Series, y_pred:pd.Series, cls_dict: dict, clss: list) -> np.ndarray:
-    cf_matrix_labels = [cls_dict[x] for x in clss]
+def calculate_cf_matrix(y_true:pd.Series, y_pred:pd.Series, import_params) -> np.ndarray:
+    cf_matrix_labels = [import_params.prediction_categories_to_index[x] for x in import_params.prediction_categories]
     cf_matrix = confusion_matrix(y_true, y_pred, labels=cf_matrix_labels)
     return cf_matrix
 

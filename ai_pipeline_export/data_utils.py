@@ -11,9 +11,6 @@ class ImportParams:
     Attributes:
         import_file_path (Path): Path to results file.
         header: Row number to use as the column names, and the start of the data.
-        image_folder_column (str): Column name of import file where to find the image folder.
-        image_name_column (str): Column name of import file where to find the image folder.
-        score_column (str): Column name of import file where to find the prediction score.
         regex_expression_folder_path: regex expression to extact category information\
             from folder path
         regex_expression_file_name: regex expr to extact category information from\
@@ -29,24 +26,39 @@ class ImportParams:
     """
     
     import_file_path: Path
-    header: int
-    image_folder_column: str
-    image_name_column: str
-    score_column: str
-    regex_expression_folder_path: str
+    prediction_categories: list
+    prediction_categories_to_index: dict
+    positive_class: str
+    negative_classes: list
+    extract_info_from_file_name: bool
     regex_expression_file_name: str
+    threshold: int
     category_map: dict
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
         self.import_file_path = Path(self.import_file_path)
+        self.image_name_column ='img'
+        self.score_column = 'scores'
+        self.truth_column = 'truth'
 
-def load_params(path: str, params_type: str):
+class ExportParams:
+    export_path: Path
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        self.export_path = Path(self.export_path)
+
+def load_import_params(path: str, params_type: str):
     params_path = Path(path)
     with open(params_path, 'r') as file:
         params = yaml.safe_load(file)
-    return ImportParams(**params[params_type])
+    if params_type == 'import_params':
+        return ImportParams(**params[params_type])
+    elif params_type == 'export_params':
+        return ExportParams(**params[params_type])
 
 def extract_info(
     df: pd.DataFrame,
@@ -74,19 +86,11 @@ def extract_info(
         file_name = p.name
         return list(re.search(r"^(.+?)_.+_(\d+)_(\d+)_(\d+)", file_name).groups())
 
-    def get_ground_truth(file_name):
-        parent = Path(file_name).parent.name
-        if parent == "good":
-            return 0
-        else:
-            return 1
+    def get_score_list(scores: str):
+        return list(map(float, scores[1:-1].split()))
 
-    def get_negative_score(scores):
-        return list(map(float, scores[1:-1].split()))[-1]
-    
-    def get_prediction(scores):
-        scrores_list = list(map(float, scores[1:-1].split()))
-        return scrores_list.index(max(scrores_list))
+    def get_ground_truth(file_name):
+        return Path(file_name).parent.name
 
     df_columns = [
         'image_name',
@@ -94,8 +98,6 @@ def extract_info(
         'sample', 
         'revolution',
         'trigger',
-        'negative_score',
-        'prediction',
         'truth'
         ]
 
@@ -107,8 +109,10 @@ def extract_info(
         df_out['sample'] = img_infos.apply(lambda x: int(x[1]))
         df_out['revolution'] = img_infos.apply(lambda x: int(x[2]))
         df_out['trigger'] = img_infos.apply(lambda x: int(x[3]))
-    df_out['negative_score'] = df[import_params.score_column].apply(get_negative_score)
-    df_out['prediction'] = df[import_params.score_column].apply(get_prediction)
+    
+    scores = df[import_params.score_column].apply(get_score_list)
+    for n, category in enumerate(import_params.prediction_categories):
+        df_out[category] = scores.apply(lambda x: x[n])
     df_out['truth'] = df_out['image_name'].apply(get_ground_truth)
     # df_out['truth'] = df[import_params.truth_column]
 
@@ -129,17 +133,38 @@ def load_results(
             extract_info_from_file_name=import_params.extract_info_from_file_name)
     return df_results
 
-def convert_test_scores_to_sample_scores(scores_df, category_map):
-    def get_ground_truth(category, category_map):
-        return category_map[category]
-        
-    df = scores_df.copy()
-    df.truth = df.category.apply(get_ground_truth, category_map=category_map)
-    max_sample_scores = df.groupby(['category','sample','revolution']).aggregate(
-        {'prediction':'max', 'negative_score':'max', 'truth':'first'})
-    return max_sample_scores
+def get_predictions(scores_df: pd.DataFrame, import_params: ImportParams):
+    def negative_threshold_passed(row):
+        for neg_cls in import_params.negative_classes:
+            if row[neg_cls] > import_params.threshold:
+                return neg_cls
+            else:
+                return import_params.positive_class
+    
+    return scores_df.apply(negative_threshold_passed, axis=1) 
+
+
+def convert_test_scores_to_sample_scores(scores_df, import_params):
+    def get_ground_truth(category, category_map = import_params.category_map):
+            return category_map[category]
+
+    def get_prediction(score, threshold=import_params.threshold):
+        if score > threshold:
+            return 1
+        else:
+            return 0
+
+    grouped_df = scores_df.groupby(['category','sample','revolution'])
+    df_results_sample_based = grouped_df.max()[import_params.negative_classes]
+    df_results_sample_based = df_results_sample_based.reset_index()
+    df_results_sample_based['negative_score']  = df_results_sample_based[import_params.negative_classes].apply(lambda x: max(x), axis = 1)
+    df_results_sample_based['prediction'] = df_results_sample_based.negative_score.apply(get_prediction)
+    df_results_sample_based['truth'] = df_results_sample_based.category.apply(get_ground_truth)
+
+    return df_results_sample_based
+    
 
 if __name__ == '__main__':
     params_path = './params.yml'
-    import_params = load_params(params_path, 'import_params')
+    import_params = load_import_params(params_path, 'import_params')
     df_results = load_results(import_params.import_file_path, import_params)
