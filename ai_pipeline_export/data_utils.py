@@ -9,13 +9,21 @@ class ImportParams:
     """Class for importing import_params field of params.yml
 
     Attributes:
-        import_file_path (Path): Path to results file.
-        header: Row number to use as the column names, and the start of the data.
-        regex_expression_folder_path: regex expression to extact category information\
-            from folder path
+        import_file_path (Path): Path to test_scores.csv file.
+        classes (list): Model classes. Will be automatically created from classes.json if not
+            specified. Defaults to None.
+        model_classes_to_index (dict): Maps class to prediction index. Will be automatically 
+            created from classes.json if not specified. Defaults to None.
+        category_to_model_class_map (dict): In case of collated classes, original classes need 
+            to be mapped to collated classes. If not collated, classes just map to itself.
+        positive_class (str): Name of "good" class.
+        extract_info_from_file_name: If set to True, a regex expression will extract category,
+            sample, revolution and trigger number from file name
+        regex_expression_folder_path: regex expression to information from filename
         regex_expression_file_name: regex expr to extact category information from\
             image name
-        category_map (dict): Dictionary to map categories to score.
+        benchmark (list): Benchmark [false reject rate, detection rate] of classic vision 
+            detection for this camera station. Will be plotted in ROC Curve.
     
     Example:
         >>> params_path = Path('./config/params.yml')
@@ -55,7 +63,7 @@ class ExportParams:
             setattr(self, key, value)
         self.export_path = Path(self.export_path)
 
-def load_import_params(path: str, params_type: str):
+def load_params(path: str, params_type: str):
     params_path = Path(path)
     with open(params_path, 'r') as file:
         params = yaml.safe_load(file)
@@ -118,7 +126,6 @@ def extract_info(
     for n, category in enumerate(import_params.model_classes):
         df_out[category] = scores.apply(lambda x: x[n])
     df_out['truth'] = df_out['image_name'].apply(get_ground_truth)
-    # df_out['truth'] = df[import_params.truth_column]
 
     return df_out
 
@@ -137,17 +144,6 @@ def load_results(
             extract_info_from_file_name=import_params.extract_info_from_file_name)
     return df_results
 
-def get_predictions(scores_df: pd.DataFrame, import_params: ImportParams):
-    def negative_threshold_passed(row):
-        for neg_cls in import_params.negative_classes:
-            if row[neg_cls] > import_params.threshold:
-                return neg_cls
-            else:
-                return import_params.positive_class
-    
-    return scores_df.apply(negative_threshold_passed, axis=1) 
-
-
 def get_sample_based_scores(df: pd.DataFrame, import_params):
     df =  df.groupby(['category','sample','revolution']).agg(max)
     df = df.reset_index()
@@ -155,7 +151,7 @@ def get_sample_based_scores(df: pd.DataFrame, import_params):
     return df
 
 if __name__ == '__main__':
-    params_path = './ai_pipeline_export/params_C61.yml'
-    import_params = load_import_params(params_path, 'import_params')
+    params_path = r'C:\Users\1699\Repositories\ai_results_viz\ai_pipeline_export\params_C51_W1.yml'
+    import_params = load_params(params_path, 'import_params')
     df_results = load_results(import_params.import_file_path, import_params)
     df_results_sample_based = get_sample_based_scores(df_results, import_params)

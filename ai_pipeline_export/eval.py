@@ -35,6 +35,7 @@ def calculate_cf_matrix(y_true:pd.Series, y_pred:pd.Series, import_params) -> np
 
 def plot_cf_matrix(cf_matrix: np.ndarray, report_folder:str, classes:list):
     "plot and save confusion matrix"
+    plt.clf()
     ax = sns.heatmap(cf_matrix, annot=True, fmt='.5g', cmap='Blues')
     ax.set_title('Confusion Matrix')
     ax.set_xlabel('Prediction')
@@ -56,6 +57,7 @@ def plot_ovr_frr_dr(y_t: list, y_s: list, save_path: str, n = 5, pos_label=1, be
         n (int): only every nth threshold is plotted
         negative_label (int, optional): negative label of ground truth. Defaults to 1.
     """
+    plt.clf()
     fpr, tpr, thresholds = roc_curve(y_t, y_s, pos_label=pos_label)
     frr = 100*(1 - tpr[::n])
     dr = 100*(1 - fpr[::n])
@@ -77,9 +79,57 @@ def plot_ovr_frr_dr(y_t: list, y_s: list, save_path: str, n = 5, pos_label=1, be
 
 
 if __name__ == '__main__':
-    df = pd.read_csv('./ai_pipeline_export/data/image_based_scores.csv')
-    params_path = './ai_pipeline_export/params_C61.yml'
-    import_params = load_import_params(params_path, 'import_params')
-    get_y_true_and_y_pred_image_based_cf_matrix(df, import_params)
+    # import params
+    params_path = r'C:\Users\1699\Repositories\ai_results_viz\ai_pipeline_export\params_C51_W1.yml'
+    import_params = load_params(params_path, 'import_params')
+    export_params = load_params(params_path, 'export_params')
 
+    # load image based data and transformation to sample-revolution based
+    # for sample-revolution based samples only the highest score of the revolution is considered
+    df_results_image_based = load_results(import_params.import_file_path, import_params)
+    df_results_sample_based = get_sample_based_scores(df_results_image_based, import_params)
 
+    # save data frames to csv file
+    export_path = Path(export_params.export_path)
+    path_image_based_csv = export_path / 'image_based_scores.csv'
+    path_sample_based_csv = export_path / 'sample_based_scores.csv'
+    df_results_image_based.to_csv(path_image_based_csv)
+    df_results_sample_based.to_csv(path_sample_based_csv)
+
+    # Calculate image based confusion matrix
+    # Prediction in y_pred is the index of the class with highest score.
+    scores = df_results_image_based[import_params.model_classes]
+    truth = df_results_image_based.truth
+    y_true, y_pred = get_y_true_and_y_pred_for_cf_matrix(scores, truth, import_params)
+    cf_matrix = calculate_cf_matrix(y_true, y_pred, import_params)
+    save_path_cf_matrix = export_path / 'image_based_cf_matrix.png'
+    plot_cf_matrix(cf_matrix, save_path_cf_matrix, import_params.model_classes)
+
+    # plotting and saving confusion matrix
+    save_path_cf_matrix = export_path / 'image_based_cf_matrix.png'
+    plot_cf_matrix(cf_matrix, save_path_cf_matrix, import_params.model_classes)
+
+    # converting truth to binary and calculate maximum negative score for ROC curve
+    y_true_roc, y_good_score = get_y_true_roc_and_y_good_score_for_roc_curve(df_results_image_based, import_params)
+    # plotting and saving ROC curve
+    save_path_ROC_curve = export_path / 'image_based_ROC_curve.png'
+    benchmark = import_params.benchmark
+    plot_ovr_frr_dr(y_true_roc, y_good_score, save_path_ROC_curve, n = 15, pos_label=import_params.pos_label, benchmark=benchmark)
+    
+    # creating and saving sample based confusion matrix
+    scores = df_results_sample_based[import_params.model_classes]
+    sample_truths = df_results_sample_based['sample_truth']
+    y_true, y_pred = get_y_true_and_y_pred_for_cf_matrix(scores, sample_truths, import_params)
+    cf_matrix = calculate_cf_matrix(y_true, y_pred, import_params)
+
+    # plotting and saving confusion matrix
+    save_path_cf_matrix = export_path / 'sample_based_cf_matrix.png'
+    plot_cf_matrix(cf_matrix, save_path_cf_matrix, import_params.model_classes)
+
+    # converting truth to binary and calculate maximum negative score for ROC curve
+    y_true_roc, y_good_score = get_y_true_roc_and_y_good_score_for_roc_curve(df_results_sample_based, import_params)
+
+    # plotting and saving ROC curve
+    save_path_ROC_curve = export_path / 'sample_based_ROC_curve.png'
+    benchmark = import_params.benchmark
+    plot_ovr_frr_dr(y_true_roc, y_good_score, save_path_ROC_curve, n = 1, pos_label=import_params.pos_label, benchmark=benchmark)
