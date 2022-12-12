@@ -1,0 +1,18 @@
+import_params:
+  import_file_path: 'C:\Users\1699\tmp\Cilag_experiments\c61_collated\model_20221208_mnp50_62_edge_length\val_scores_converted.csv'
+  category_to_model_class_map:
+    "besch_stopfen": "besch_stopfen"
+    "faser_stopfen": "faser_stopfen"
+    "lyo_stopfen": "lyo_stopfen"
+    "mark_stopfen": "mark_stopfen"
+    "partikel_iglo": "partikel_iglo"
+    "sprung_hals": "sprung_hals"
+    "good": "good"
+  positive_class: 'good'
+  pos_label: 1
+  extract_info_from_file_name: true
+  regex_expression_file_name: '^(.+?)_[(good)|(bad)].+_(\d+)_(\d+)_(\d+)'
+  benchmark: [2.6, 32.5]
+
+export_params:
+  export_path: 'C:\Users\1699\tmp\Cilag_experiments\c61_collated\model_20221208_mnp50_62_edge_length\eval_val'

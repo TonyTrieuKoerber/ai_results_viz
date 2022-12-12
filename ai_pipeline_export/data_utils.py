@@ -145,10 +145,11 @@ def load_results(
     return df_results
 
 def get_sample_based_scores(df: pd.DataFrame, import_params):
-    df =  df.groupby(['category','sample','revolution']).agg(max)
-    df = df.reset_index()
-    df['sample_truth'] = df.category.apply(lambda x: import_params.category_to_model_class_map[x])
-    return df
+    df_samples =  df.groupby(['category','sample','revolution']).agg(max).reset_index()
+    good_min = df.groupby(['category','sample','revolution']).agg({import_params.positive_class: 'min'}).values
+    df_samples['good'] = good_min
+    df_samples['sample_truth'] = df_samples.category.apply(lambda x: import_params.category_to_model_class_map[x])
+    return df_samples
 
 if __name__ == '__main__':
     params_path = r'C:\Users\1699\Repositories\ai_results_viz\ai_pipeline_export\params_C51_W1.yml'
