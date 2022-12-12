@@ -7,7 +7,7 @@ from data_utils import *
 from pathlib import Path
 
 
-def get_y_true_and_y_pred_for_cf_matrix(scores: pd.DataFrame, truth: pd.Series, import_params):
+def get_y_true_and_y_pred_for_multiclass_cf_matrix(scores: pd.DataFrame, truth: pd.Series, import_params):
     def get_max_index(row):
         return row.idxmax()
 
@@ -16,14 +16,10 @@ def get_y_true_and_y_pred_for_cf_matrix(scores: pd.DataFrame, truth: pd.Series, 
     y_true = truth.apply(lambda x: import_params.model_classes_to_index[x])
     return y_true, y_pred
 
-def convert_scores_to_good_bad(df, import_params):
-    df_good_bad = pd.DataFrame()
-    df_good_bad[import_params.positive_class] = df[import_params.positive_class]
-    df_good_bad['bad'] = 1 - df_good_bad
-    return df_good_bad
-
-def convert_classes_to_good_bad(ser, import_params):
-    return ser.apply(lambda x: import_params.positive_class if x==import_params.positive_class else 'bad')
+def get_y_true_and_y_pred_for_binary_cf_matrix(scores: pd.DataFrame, truth: pd.Series, import_params):
+    y_pred = scores.agg(lambda x: import_params.positive_class if x.idxmax() == import_params.positive_class else 'bad', axis=1)
+    y_true = truth.apply(lambda x: import_params.positive_class if x==import_params.positive_class else 'bad')
+    return y_true, y_pred
 
 def get_y_binary(df, import_params):
     def convert_class_to_binary(row):
@@ -92,7 +88,7 @@ def plot_ovr_frr_dr(y_t: list, y_s: list, save_path: str, n = None, pos_label=1,
 
 if __name__ == '__main__':
     params_paths = [
-        r'C:\Users\1699\Repositories\ai_results_viz\ai_pipeline_export\params_C61_collated_test.yml',
+        r'C:\Users\1699\Repositories\ai_results_viz\ai_pipeline_export\params_C61_collated test.yml',
     ]
     
     # import params
@@ -112,43 +108,36 @@ if __name__ == '__main__':
         df_results_image_based.to_csv(path_image_based_csv)
         df_results_sample_based.to_csv(path_sample_based_csv)
 
-        # Calculate image and sample based confusion matrix
+        # Calculate image and sample based confusion matrices
         # Prediction in y_pred is the index of the class with highest score.
         scores_img = df_results_image_based[import_params.model_classes]
-        truth_img = df_results_image_based.truth
-        save_path_cf_matrix_img = export_path / 'image_based_multiclass_cf_matrix.png'
+        truth_img = df_results_image_based.image_truth
+        save_paths_img_based_cf_matrices = (
+            export_path / 'image_based_multiclass_cf_matrix.png',
+            export_path / 'image_based_binary_cf_matrix.png',
+            export_path / 'image_based_ROC_curve.png'
+        )
 
         scores_sample = df_results_sample_based[import_params.model_classes]
         truth_sample = df_results_sample_based.sample_truth
-        save_path_cf_matrix_sample = export_path / 'sample_based_cf_matrix.png'
+        save_paths_sample_based_cf_matrices = (
+            export_path / 'sample_based_cf_matrix.png',
+            export_path / 'sample_based_binary_cf_matrix.png',
+            export_path / 'sample_based_ROC_curve.png'
+        )
         
         scores_truth_path = (
-            (scores_img, truth_img, save_path_cf_matrix_img),
-            (scores_sample, truth_sample, save_path_cf_matrix_sample)
+            (scores_img, truth_img, save_paths_img_based_cf_matrices),
+            (scores_sample, truth_sample, save_paths_sample_based_cf_matrices)
         )
-        for scores, truth, path in scores_truth_path:
-            y_true, y_pred = get_y_true_and_y_pred_for_cf_matrix(scores, truth, import_params)
-            cf_matrix = calculate_cf_matrix(y_true, y_pred, import_params)
-            plot_cf_matrix(cf_matrix, path, import_params.model_classes)
-
-        # Convert image based confusion matrix to binary confusion matrix
-        y_true = convert_classes_to_good_bad(truth_img, import_params)
-        y_pred = scores_img.agg(lambda x: import_params.positive_class if x.idxmax() == import_params.positive_class else 'bad', axis=1)
-        cf_matrix = confusion_matrix(y_true, y_pred, labels=['bad', 'good'])
-        save_path_cf_matrix_img_binary = export_path / 'image_based_binary_cf_matrix.png'
-        plot_cf_matrix(cf_matrix, save_path_cf_matrix_img_binary, ['bad', 'good'])
-
-        # converting 'truth' value to binary and calculate maximum negative score for ROC curve
-        # plotting and saving ROC curve
-        y_good_score = df_results_image_based[import_params.positive_class]
-        y_true_binary = get_y_binary(df_results_image_based.truth, import_params)
-        save_path_ROC_curve = export_path / 'image_based_ROC_curve.png'
-        benchmark = import_params.benchmark
-        plot_ovr_frr_dr(y_true_binary, y_good_score, save_path_ROC_curve, pos_label=import_params.pos_label, benchmark=benchmark)
-
-        # converting truth to binary and calculate maximum negative score for ROC curve
-        # plotting and saving ROC curve
-        y_good_score = df_results_sample_based[import_params.positive_class]
-        y_true_binary = get_y_binary(df_results_sample_based.sample_truth, import_params)
-        save_path_ROC_curve = export_path / 'sample_based_ROC_curve.png'
-        plot_ovr_frr_dr(y_true_binary, y_good_score, save_path_ROC_curve, pos_label=import_params.pos_label, benchmark=benchmark)
+        for scores, truth, paths in scores_truth_path:
+            y_true_img, y_pred_img = get_y_true_and_y_pred_for_multiclass_cf_matrix(scores, truth, import_params)
+            y_true_sample, y_pred_sample = get_y_true_and_y_pred_for_binary_cf_matrix(scores, truth, import_params)
+            y_good_score = scores[import_params.positive_class]
+            cf_matrix_img = calculate_cf_matrix(y_true_img, y_pred_img, import_params)
+            cf_matrix_sample = confusion_matrix(y_true_sample, y_pred_sample, labels=['bad', 'good'])
+            plot_cf_matrix(cf_matrix_img, paths[0], import_params.model_classes)
+            plot_cf_matrix(cf_matrix_sample, paths[1], ['bad', 'good'])
+            plot_ovr_frr_dr(truth, y_good_score, paths[2], pos_label=import_params.positive_class, 
+                            benchmark=import_params.benchmark)
+                            

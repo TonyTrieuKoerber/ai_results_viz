@@ -53,7 +53,7 @@ class ImportParams:
             self.model_classes_to_index = {j:i for i,j in enumerate(self.model_classes)}
         self.image_name_column ='img'
         self.score_column = 'scores'
-        self.truth_column = 'truth'
+        self.truth_column = 'image_truth'
 
 class ExportParams:
     export_path: Path
@@ -110,7 +110,7 @@ def extract_info(
         'sample', 
         'revolution',
         'trigger',
-        'truth'
+        'image_truth'
         ]
 
     df_out = pd.DataFrame(columns=df_columns)
@@ -125,7 +125,7 @@ def extract_info(
     scores = df[import_params.score_column].apply(get_score_list)
     for n, category in enumerate(import_params.model_classes):
         df_out[category] = scores.apply(lambda x: x[n])
-    df_out['truth'] = df_out['image_name'].apply(get_ground_truth)
+    df_out['image_truth'] = df_out['image_name'].apply(get_ground_truth)
 
     return df_out
 
