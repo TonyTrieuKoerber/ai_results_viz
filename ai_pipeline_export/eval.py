@@ -7,6 +7,13 @@ from data_utils import *
 from pathlib import Path
 
 
+def get_sample_based_scores(df: pd.DataFrame, import_params):
+    df_samples =  df.groupby(['category','sample','revolution']).agg(max).reset_index()
+    good_min = df.groupby(['category','sample','revolution']).agg({import_params.positive_class: 'min'}).values
+    df_samples['good'] = good_min
+    df_samples['sample_truth'] = df_samples.category.apply(lambda x: import_params.category_to_model_class_map[x])
+    return df_samples
+
 def get_y_true_and_y_pred_for_multiclass_cf_matrix(scores: pd.DataFrame, truth: pd.Series, import_params):
     def get_max_index(row):
         return row.idxmax()
@@ -20,18 +27,6 @@ def get_y_true_and_y_pred_for_binary_cf_matrix(scores: pd.DataFrame, truth: pd.S
     y_pred = scores.agg(lambda x: import_params.positive_class if x.idxmax() == import_params.positive_class else 'bad', axis=1)
     y_true = truth.apply(lambda x: import_params.positive_class if x==import_params.positive_class else 'bad')
     return y_true, y_pred
-
-def get_y_binary(df, import_params):
-    def convert_class_to_binary(row):
-        # returns 0 or 1 depending on class and positive_index.
-        # positive_index can only be 0 or 1 
-        if not row == import_params.positive_class:
-            return 1 - import_params.pos_label
-        else:
-            return import_params.pos_label
-
-    y_binary = df.apply(convert_class_to_binary)
-    return y_binary
 
 def calculate_cf_matrix(y_true:pd.Series, y_pred:pd.Series, import_params) -> np.ndarray:
     cf_matrix_labels = [import_params.model_classes_to_index[x] for x in import_params.model_classes]
@@ -140,4 +135,3 @@ if __name__ == '__main__':
             plot_cf_matrix(cf_matrix_sample, paths[1], ['bad', 'good'])
             plot_ovr_frr_dr(truth, y_good_score, paths[2], pos_label=import_params.positive_class, 
                             benchmark=import_params.benchmark)
-                            
