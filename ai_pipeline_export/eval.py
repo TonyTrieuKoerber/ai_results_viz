@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, roc_curve
+from sklearn.metrics import confusion_matrix, roc_curve, auc
 from data_utils import *
 from pathlib import Path
 
@@ -29,10 +29,9 @@ def get_y_true_and_y_pred_for_binary_cf_matrix(scores: pd.DataFrame, truth: pd.S
     return y_true, y_pred
 
 def get_truth_type(score_type):
-    if score_type == "image_based":
-        return "image_truth"
-    else:
-        return "sample_truth"
+    """Placeholder"""
+    truth_type = 'image_truth' if score_type == 'image_based' else 'sample_truth'
+    return truth_type
 
 def get_dr_and_threshold(df, frr, score_type, import_params):
     truth_type = get_truth_type(score_type)    
@@ -89,7 +88,15 @@ def plot_cf_matrix_binary(cf_matrix: np.ndarray, report_folder:str, classes:list
         plt.subplots_adjust(left=0.25)
     plt.savefig(report_folder,bbox_inches = "tight")
 
-def plot_ovr_frr_dr(y_t: list, y_s: list, save_path: str, n = None, pos_label=1, benchmark = [0,0], score_type:str =""):
+def plot_ovr_frr_dr(
+    y_t: list, 
+    y_s: list, 
+    save_path: str, 
+    n = None, 
+    xlim = 15.0, 
+    pos_label=1, 
+    benchmark = None,
+    score_type:str =""):
     """Takes ground truth and scores for good class and plots complementary ROC curve with
     detection rate vs false reject rate instead of true positive rate vs false
     positive rate. Only every nth threshold is shown in plot.
@@ -100,28 +107,44 @@ def plot_ovr_frr_dr(y_t: list, y_s: list, save_path: str, n = None, pos_label=1,
         y_s (list): scores calculated by the model
         save_path (str): path to save the roc curve
         n (int): only every nth threshold is plotted
+        xlim (float): maximum value of x axis in %
+        benchmark (list): plot classical vision detection benchmark in ROC
         negative_label (int, optional): negative label of ground truth. Defaults to 1.
     """
     plt.clf()
     fpr, tpr, thresholds = roc_curve(y_t, y_s, pos_label=pos_label)
+    frr = 100 * (1 - tpr)
+    dr = 100 * (1 - fpr)
+    
+    roc_points = list(zip(frr, dr))
+    if xlim:
+        frr_auc_xlim = [x[0] for x in roc_points if x[0] < xlim]
+        dr_auc_xlim = [x[1] for x in roc_points if x[0] < xlim]
+        auc_xlim = auc(frr_auc_xlim, dr_auc_xlim)
+    auc_max = auc(frr, dr)
+    
     if not n:
-        n = int(len(fpr)/20)
-        if n == 0:
-            n += 1
-
-    frr = 100*(1 - tpr[::n])
-    dr = 100*(1 - fpr[::n])
-    thresholds = thresholds[::n]
+        n = int(len(fpr)/100)
+    elif n == 0:
+        n = 1
+    frr = np.append(frr[::n], frr[-1])
+    dr = np.append(dr[::n], dr[-1])
+    thresholds = np.append(thresholds[::n], thresholds[-1])
 
     plt.figure()
     plt.plot(frr, dr, 'o-', color='darkorange', lw=1, label='threshold')
     plt.plot([0, 100], [0, 100], color='navy', lw=1, linestyle='--')
-    plt.plot(*benchmark, 'go', label='vision detection')
-    plt.xlim([0.0, 100])
+    if benchmark:
+        plt.plot(*benchmark, 'go', label='vision detection')
+    plt.xlim([0.0, xlim])
     plt.ylim([0.0, 105])
     plt.xlabel('False Reject Rate [%]')
     plt.ylabel('Detection Rate [%]')
     plt.title(f'Complementary receiver operating characteristic ({score_type})', loc='right')
+    auc_text = f'Area under curve (AUC)\nTotal = {auc_max:.3f}'
+    if xlim:
+        auc_text += f'\n0<x<{xlim}% = {auc_xlim:.3f}'
+    plt.figtext(0.63, 0.25, auc_text, fontsize='medium')
     plt.legend(loc="lower right")
     for x, y, txt in zip(frr,dr,thresholds):
         plt.annotate(np.round(txt,3), (x, y-0.04), rotation = -30, verticalalignment ='top')
@@ -195,11 +218,12 @@ if __name__ == '__main__':
             if score_type == "sample_based" and sum(truth_sample==import_params.positive_class)==0:
                 continue
             frr_dr_threshold = []
-            frr_benchmark = import_params.benchmark[0] * 0.01
+            frr_benchmark = import_params.benchmark['frr'] * 0.01
+            frr_benchmark_80_percent = 0.8 * frr_benchmark
             dr_resulting, threshold_resulting = get_dr_and_threshold(
                 eval_params[score_type]['data_frame'], frr_benchmark, score_type, import_params)
             frr_dr_threshold.append([frr_benchmark,dr_resulting,threshold_resulting])
-            dr_benchmark = import_params.benchmark[1] * 0.01
+            dr_benchmark = import_params.benchmark['dr'] * 0.01
             frr_resulting, threshold_resulting =get_frr_and_threshold(
                 eval_params[score_type]['data_frame'], dr_benchmark, score_type, import_params)
             frr_dr_threshold.append([frr_resulting,dr_benchmark,threshold_resulting])

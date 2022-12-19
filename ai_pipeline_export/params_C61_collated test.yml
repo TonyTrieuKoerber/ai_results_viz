@@ -12,7 +12,9 @@ import_params:
   pos_label: 1
   extract_info_from_file_name: true
   regex_expression_file_name: '^(.+?)_[(good)|(bad)].+_(\d+)_(\d+)_(\d+)'
-  benchmark: [2.6, 32.5]
+  benchmark: 
+    "frr": 2.6
+    "dr": 32.5
 
 export_params:
   export_path: 'Z:\ejectx_repositories\results\c61_collated\model_20221208_3cp50_50_edge_length\test_scores\export\'
