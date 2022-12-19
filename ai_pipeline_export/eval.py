@@ -65,7 +65,7 @@ def plot_cf_matrix_multiclass(cf_matrix: np.ndarray, report_folder:str, classes:
     ax.set_ylabel('Ground Truth')
     ax.xaxis.set_ticklabels(classes, rotation=30)
     ax.yaxis.set_ticklabels(classes, rotation=30)
-    plt.savefig(report_folder,bbox_inches = "tight")
+    plt.savefig(report_folder,bbox_inches = "tight", format='svg')
 
 def plot_cf_matrix_binary(cf_matrix: np.ndarray, report_folder:str, classes:list, 
     threshold:float = None, score_type:str = ""):
@@ -86,7 +86,7 @@ def plot_cf_matrix_binary(cf_matrix: np.ndarray, report_folder:str, classes:list
             textstr += f'\nThreshold = {threshold:.4f}'
         plt.figtext(0.02, 0.85, textstr, fontsize='large', bbox=dict(facecolor='none', edgecolor='black'))
         plt.subplots_adjust(left=0.25)
-    plt.savefig(report_folder,bbox_inches = "tight")
+    plt.savefig(report_folder,bbox_inches = "tight", format='svg')
 
 def plot_ovr_frr_dr(
     y_t: list, 
@@ -96,7 +96,7 @@ def plot_ovr_frr_dr(
     xlim = 15.0, 
     pos_label=1, 
     benchmark = None,
-    score_type:str =""):
+    score_type:str ="")->list:
     """Takes ground truth and scores for good class and plots complementary ROC curve with
     detection rate vs false reject rate instead of true positive rate vs false
     positive rate. Only every nth threshold is shown in plot.
@@ -110,6 +110,10 @@ def plot_ovr_frr_dr(
         xlim (float): maximum value of x axis in %
         benchmark (list): plot classical vision detection benchmark in ROC
         negative_label (int, optional): negative label of ground truth. Defaults to 1.
+
+    Returns:
+        list: List containing ((false reject rate, detection rate), threshold)) values.
+            Each element in the list is a FRR, DR pair and their threshold value.
     """
     plt.clf()
     fpr, tpr, thresholds = roc_curve(y_t, y_s, pos_label=pos_label)
@@ -125,7 +129,7 @@ def plot_ovr_frr_dr(
     
     if not n:
         n = int(len(fpr)/100)
-    elif n == 0:
+    if n == 0:
         n = 1
     frr = np.append(frr[::n], frr[-1])
     dr = np.append(dr[::n], dr[-1])
@@ -135,7 +139,7 @@ def plot_ovr_frr_dr(
     plt.plot(frr, dr, 'o-', color='darkorange', lw=1, label='threshold')
     plt.plot([0, 100], [0, 100], color='navy', lw=1, linestyle='--')
     if benchmark:
-        plt.plot(*benchmark, 'go', label='vision detection')
+        plt.plot(benchmark['frr'],benchmark['dr'], 'go', label='vision detection')
     plt.xlim([0.0, xlim])
     plt.ylim([0.0, 105])
     plt.xlabel('False Reject Rate [%]')
@@ -143,12 +147,14 @@ def plot_ovr_frr_dr(
     plt.title(f'Complementary receiver operating characteristic ({score_type})', loc='right')
     auc_text = f'Area under curve (AUC)\nTotal = {auc_max:.3f}'
     if xlim:
-        auc_text += f'\n0<x<{xlim}% = {auc_xlim:.3f}'
+        auc_text += f'\nx<{xlim}% = {auc_xlim:.3f}'
     plt.figtext(0.63, 0.25, auc_text, fontsize='medium')
     plt.legend(loc="lower right")
     for x, y, txt in zip(frr,dr,thresholds):
         plt.annotate(np.round(txt,3), (x, y-0.04), rotation = -30, verticalalignment ='top')
-    plt.savefig(save_path)
+    plt.savefig(save_path, format='svg')
+
+    return list(zip(roc_points,thresholds))
 
 
 if __name__ == '__main__':
@@ -203,13 +209,13 @@ if __name__ == '__main__':
             # prediction type: one vs one
             y_true_img, y_pred_img = get_y_true_and_y_pred_for_multiclass_cf_matrix(scores, truth, import_params)
             cf_matrix_img = calculate_cf_matrix(y_true_img, y_pred_img, import_params)
-            img_path_mcfm = export_path / (score_type + '_multiclass_cf_matrix.png')
+            img_path_mcfm = export_path / (score_type + '_multiclass_cf_matrix.svg')
             plot_cf_matrix_multiclass(cf_matrix_img, img_path_mcfm, import_params.model_classes, score_type=score_type)
 
             # create ROC curve
             # prediction type: good score > threshold
             y_good_score = scores[import_params.positive_class]
-            img_path_roc = export_path / (score_type + '_complementary_ROC_curve.png')
+            img_path_roc = export_path / (score_type + '_complementary_ROC_curve.svg')
             plot_ovr_frr_dr(truth, y_good_score, img_path_roc, pos_label=import_params.positive_class, 
                             benchmark=import_params.benchmark, score_type=score_type)
             
@@ -217,26 +223,44 @@ if __name__ == '__main__':
             # skip if number of good samples == 0
             if score_type == "sample_based" and sum(truth_sample==import_params.positive_class)==0:
                 continue
-            frr_dr_threshold = []
-            frr_benchmark = import_params.benchmark['frr'] * 0.01
-            frr_benchmark_80_percent = 0.8 * frr_benchmark
-            dr_resulting, threshold_resulting = get_dr_and_threshold(
-                eval_params[score_type]['data_frame'], frr_benchmark, score_type, import_params)
-            frr_dr_threshold.append([frr_benchmark,dr_resulting,threshold_resulting])
-            dr_benchmark = import_params.benchmark['dr'] * 0.01
-            frr_resulting, threshold_resulting =get_frr_and_threshold(
-                eval_params[score_type]['data_frame'], dr_benchmark, score_type, import_params)
-            frr_dr_threshold.append([frr_resulting,dr_benchmark,threshold_resulting])
-            
-            for frr, dr, threshold in frr_dr_threshold:
+            frr_dr_threshold = {}
+
+            benchmark_1 = import_params.benchmark['frr'] * 0.01
+            benchmark_2 = 0.8 * benchmark_1
+            benchmark_3 = import_params.benchmark['dr'] * 0.01
+            benchmark_4 = 0.8 * benchmark_3
+
+            dr_benchmark_1, threshold_benchmark_1 = get_dr_and_threshold(
+                eval_params[score_type]['data_frame'], benchmark_1, score_type, import_params)
+            dr_benchmark_2, threshold_benchmark_2 = get_dr_and_threshold(
+                eval_params[score_type]['data_frame'], benchmark_2, score_type, import_params)
+            dr_benchmark_3, threshold_benchmark_3 = get_frr_and_threshold(
+                 eval_params[score_type]['data_frame'], benchmark_3, score_type, import_params)
+            dr_benchmark_4, threshold_benchmark_4 = get_frr_and_threshold(
+                 eval_params[score_type]['data_frame'], benchmark_4, score_type, import_params)
+
+            benchmark_1_dict = {'frr': benchmark_1, 'dr': dr_benchmark_1, 'threshold': threshold_benchmark_1}
+            benchmark_2_dict = {'frr': benchmark_2, 'dr': dr_benchmark_2, 'threshold': threshold_benchmark_2}
+            benchmark_3_dict = {'frr': benchmark_3, 'dr': dr_benchmark_3, 'threshold': threshold_benchmark_3}
+            benchmark_4_dict = {'frr': benchmark_4, 'dr': dr_benchmark_4, 'threshold': threshold_benchmark_4}
+
+            frr_dr_threshold['FRR_benchmark'] = benchmark_1_dict
+            frr_dr_threshold['FRR_benchmark_80_percent'] = benchmark_2_dict
+            frr_dr_threshold['DR_benchmark'] = benchmark_3_dict
+            frr_dr_threshold['DR_benchmark_80_percent'] = benchmark_4_dict
+
+            for benchmark in frr_dr_threshold.keys():
+                frr = frr_dr_threshold[benchmark]['frr']
+                dr = frr_dr_threshold[benchmark]['dr']
+                threshold = frr_dr_threshold[benchmark]['threshold']
                 # create binary confusion matrix
                 # prediction type: good score > threshold
                 y_true_image_binary, y_pred_img_binary = get_y_true_and_y_pred_for_binary_cf_matrix(
                     scores, truth, import_params, threshold=threshold)
                 cf_matrix_sample = confusion_matrix(y_true_image_binary, y_pred_img_binary, labels=['bad', 'good'])
-                img_dir_bcfm = export_path / f'{score_type}_FRR_{frr:.5f}__DR_{dr:.5f}__threshold_{threshold:.5f}'
+                img_dir_bcfm = export_path / f'{benchmark}'
                 img_dir_bcfm.mkdir(exist_ok=True)
-                img_path_bcfm = img_dir_bcfm / (score_type + '_binary_cf_matrix.png')
+                img_path_bcfm = img_dir_bcfm / (score_type + '_binary_cf_matrix.svg')
                 plot_cf_matrix_binary(cf_matrix_sample, img_path_bcfm, ['bad', 'good'], 
                     threshold=threshold, score_type=score_type)
             
