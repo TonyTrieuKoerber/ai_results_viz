@@ -65,6 +65,7 @@ class ExportParams:
     """
     export_path: Path
     img_format: str = 'svg'
+    x_lim: float = 15
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
