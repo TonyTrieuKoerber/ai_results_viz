@@ -1,5 +1,5 @@
 import_params:
-  import_file_path: 'Z:\ejectx_repositories\results\c61_collated\model_20221208_3cp50_50_edge_length\test_scores\export\val_scores.csv'
+  import_file_path: 'C:\Users\1699\tmp\export\val_scores.csv'
   category_to_model_class_map:
     "besch_stopfen": "besch_stopfen"
     "faser_stopfen": "fas_mark_part_stopfen"
@@ -9,7 +9,6 @@ import_params:
     "sprung_hals": "sprung_hals"
     "good": "good"
   positive_class: 'good'
-  pos_label: 1
   extract_info_from_file_name: true
   regex_expression_file_name: '^(.+?)_[(good)|(bad)].+_(\d+)_(\d+)_(\d+)'
   benchmark: 
@@ -17,4 +16,6 @@ import_params:
     "dr": 32.5
 
 export_params:
-  export_path: 'Z:\ejectx_repositories\results\c61_collated\model_20221208_3cp50_50_edge_length\test_scores\export\'
+  export_path: 'C:\Users\1699\tmp\export\'
+  img_format: 'svg'
+  x_lim: 15
